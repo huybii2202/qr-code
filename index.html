@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Thanh toán nhập hàng</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f8;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 50px 20px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        input[type="text"] {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            width: 250px;
+            margin-bottom: 15px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-top: 20px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        img#qrCode {
+            margin-top: 20px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            padding: 10px;
+            background-color: white;
+        }
+
+        #qrCodeContainer {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Thanh toán đặt hàng</h1>
+    <input type="number" id="inputMount" placeholder="Enter amount (VND)" />
+    <button onclick="generateQR()">Tạo mã QR</button>
+
+    <div id="qrCodeContainer">
+        <p>Chuyển khoản đến tài khoản: <strong>202388886868</strong></p>
+        <p>Tên tài khoản: <strong>Hoàng Thị Phương Thảo</strong></p>
+    </div>
+    <img id="qrCode" style="display:none;" />
+
+    <script>
+        const API_KEY = "39d174f0-1b70-4661-af8d-b96976715129";
+        const CLIENT_ID = "39d174f0-1b70-4661-af8d-b96976715129";
+        const URL = "https://api.vietqr.io/v2/generate";
+
+        function setCookie(name, value, days) {
+            const expires = days
+                ? `; expires=${new Date(Date.now() + days * 864e5).toUTCString()}`
+                : "";
+            document.cookie = `${name}=${encodeURIComponent(value || "")}${expires}; path=/`;
+        }
+
+        function getCookie(name) {
+            const match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
+            return match ? decodeURIComponent(match[2]) : null;
+        }
+
+        window.addEventListener("DOMContentLoaded", () => {
+            const savedAmount = getCookie("savedAmount");
+            if (savedAmount !== null) {
+                document.getElementById("inputMount").value = savedAmount;
+                console.log("✅ Khôi phục số tiền từ cookie:", savedAmount);
+            }
+        });
+        document.getElementById("inputMount").addEventListener("input", (e) => {
+            const amount = e.target.value.trim();
+            setCookie("savedAmount", amount, 7);
+        });
+        async function generateQR() {
+            const qrCodeMountInput = document.getElementById("inputMount");
+            const amount = qrCodeMountInput.value.trim();
+
+            const payload = {
+                accountName: "Hoàng Thị Phương Thảo",
+                acqId: "970422",
+                amount: amount,
+                template: "compact",
+                accountNo: "202388886868"
+            };
+
+            try {
+                const response = await fetch(URL, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        client_id: CLIENT_ID,
+                        api_key: API_KEY
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+                console.log("STATUS", response.status);
+
+                if (response.ok && data?.data?.qrDataURL) {
+                    console.log("QR Code Data URL:", data.data);
+
+                    const qrCodeImage = document.getElementById("qrCode");
+                    qrCodeImage.src = data.data.qrDataURL;
+                    qrCodeImage.style.display = "block";
+                    qrCodeImage.alt = "QR Code";
+                    const qrCodeContainer = document.getElementById("qrCodeContainer");
+                    qrCodeContainer.style.display = "block";
+                } else {
+                    console.error("API Error:", data);
+                    alert("Error generating QR code. Please check the account number or try again later.");
+                }
+            } catch (error) {
+                console.error("Network Error:", error);
+                alert("Network error. Please try again later.");
+            }
+        }
+    </script>
+</body>
+
+</html>
